@@ -18,7 +18,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -28,6 +27,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
@@ -41,10 +41,9 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
-public class MainActivity extends BaseActivity
-        implements NavigationView.OnNavigationItemSelectedListener,
+public class MainActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
         GoogleApiClient.OnConnectionFailedListener,
-        Button.OnClickListener {
+        View.OnClickListener{
 
     private static final String TAG = "GoogleActivity";
     private static final int RC_SIGN_IN = 9001;
@@ -60,7 +59,7 @@ public class MainActivity extends BaseActivity
     private GoogleApiClient mGoogleApiClient;
 
     private NavigationView navigationView;
-
+    private SignInButton btSignInDefault;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +67,14 @@ public class MainActivity extends BaseActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        btSignInDefault = (SignInButton) findViewById(R.id.sign_in_button);
+        btSignInDefault.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                signIn();
+            }
+        });
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -215,18 +222,11 @@ public class MainActivity extends BaseActivity
     }
     // [END onactivityresult]
 
+    //[GET CLICK FROM VIEW]
     @Override
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.sign_in_button:
-                signIn();
-                break;
-            /*case R.id.sign_out_button:
-                signOut();
-                break;
-            case R.id.disconnect_button:
-                revokeAccess();
-                break;*/
+    public void onClick(View view) {
+        if(view.getId()==R.id.sign_in_button){
+            signIn();
         }
     }
 
@@ -365,4 +365,5 @@ public class MainActivity extends BaseActivity
         mAuth = FirebaseAuth.getInstance();
         // [END initialize_auth]
     }
+
 }
