@@ -1,8 +1,10 @@
 <resources>
-    <string name="app_name">HackathonAndroidos2016FatecIpiranga-SmartMeetingClient</string>
-
+    <string name="app_name">SmartMeeting</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
-
+    <string name="opcao_login">Login</string>
+    <string name="opcao_logout">Logout</string>
     <string name="action_settings">Settings</string>
+    <string name="loading">Autenticando</string>
+    <string name="gravar">Gravar Reunião</string>
 </resources>
