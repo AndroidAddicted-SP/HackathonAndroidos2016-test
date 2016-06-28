@@ -1,11 +1,14 @@
 package addicted.android.hackathonandroidos2016fatecipiranga_smartmeetingclient;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.support.v4.view.GravityCompat;
@@ -16,6 +19,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -31,14 +35,23 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageMetadata;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
+
+import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends BaseActivity implements NavigationView.OnNavigationItemSelectedListener,
         GoogleApiClient.OnConnectionFailedListener,
@@ -55,12 +68,18 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
     private FirebaseAuth.AuthStateListener mAuthListener;
     // [END declare_auth_listener]
 
+    // [START declare_ref]
+    private StorageReference mStorageRef;
+    // [END declare_ref]
+
     private GoogleApiClient mGoogleApiClient;
 
     private NavigationView navigationView;
     private SignInButton btSignInDefault;
     private ImageButton imvMic;
     private FirebaseUser user;
+    private final int REQ_CODE_SPEECH_INPUT = 100;
+    List<String> ataReuniaoGravada;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,14 +89,9 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         setSupportActionBar(toolbar);
 
         imvMic = (ImageButton) findViewById(R.id.imvMic);
-
+        imvMic.setOnClickListener(this);
         btSignInDefault = (SignInButton) findViewById(R.id.sign_in_button);
-        btSignInDefault.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                signIn();
-            }
-        });
+        btSignInDefault.setOnClickListener(this);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -88,8 +102,8 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        //PARTE REFERENTE AO oAuth
-        initAuthenticatorAPIs();
+        //INICIALICANDO FIREBASE E GOOGLE APIs
+        initAPIs();
 
         // [START auth_state_listener]
         mAuthListener = new FirebaseAuth.AuthStateListener() {
@@ -199,25 +213,34 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         Toast.makeText(this, "Google Play Services error.", Toast.LENGTH_SHORT).show();
     }
 
-    // [START onactivityresult]
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...);
-        if (requestCode == RC_SIGN_IN) {
-            GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
-            if (result.isSuccess()) {
-                // Google Sign In was successful, authenticate with Firebase
-                GoogleSignInAccount account = result.getSignInAccount();
-                firebaseAuthWithGoogle(account);
-                imvMic.setVisibility(View.VISIBLE);
-                btSignInDefault.setVisibility(View.GONE);
-            } else {
-                // Google Sign In failed, update UI appropriately
-                // [START_EXCLUDE]
-                //updateUI(null);
-                // [END_EXCLUDE]
+        switch (requestCode) {
+            case RC_SIGN_IN: {
+                GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
+                if (result.isSuccess()) {
+                    // Google Sign In was successful, authenticate with Firebase
+                    GoogleSignInAccount account = result.getSignInAccount();
+                    firebaseAuthWithGoogle(account);
+                    imvMic.setVisibility(View.VISIBLE);
+                    findViewById(R.id.sign_in_button).setVisibility(View.GONE);
+                }else{
+                    findViewById(R.id.sign_in_button).setVisibility(View.VISIBLE);
+                }
+                break;
+            }
+
+            case REQ_CODE_SPEECH_INPUT: {
+                if (resultCode == RESULT_OK && null != data) {
+
+                    ataReuniaoGravada = data
+                            .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    //GRAVANDO DADOS CAPTURADOS PELA API SPEECH
+                    uploadToFirebase(ataReuniaoGravada);
+                }
+                break;
             }
         }
     }
@@ -231,8 +254,7 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         }
         if(view.getId()==R.id.imvMic){
             //Speech
-
-
+            promptSpeechInput();
         }
     }
 
@@ -274,7 +296,6 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
     //ALTERAR A TELA DE ACORDO COM O STATUS DO USER (LOGADO/NAO LOGADO)
     private void updateUI(FirebaseUser user){
         hideProgressDialog();
-        final ImageView imgCapa = (ImageView) findViewById(R.id.imgCapa);
         final ImageView imgFoto = (ImageView) findViewById(R.id.imgFotoPerfil);
         final TextView txtNome = (TextView) findViewById(R.id.txtNome);
         if (user != null) {
@@ -299,31 +320,9 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
                     .load(user.getPhotoUrl())
                     .into(target);
 
-            /*Person person = Plus.PeopleApi.getCurrentPerson(mGoogleApiClient);
 
-            if (person.hasCover()) {
-                Picasso.with(MainActivity.this)
-                        .load(person.getCover().getCoverPhoto().getUrl())
-                        .into(imgCapa);
-            }*/
-
-            findViewById(R.id.sign_in_button).setVisibility(View.GONE);
-            //findViewById(R.id.sign_out_and_disconnect).setVisibility(View.VISIBLE);
-        } else {
-            //mStatusTextView.setText(R.string.signed_out);
-            //mDetailTextView.setText(null);
-
-            findViewById(R.id.sign_in_button).setVisibility(View.VISIBLE);
-            //findViewById(R.id.sign_out_and_disconnect).setVisibility(View.GONE);
-           // imgCapa.setImageBitmap(null);
-            //txtNome.setText(R.string.app_name);
-            //imgFoto.setImageResource(R.mipmap.ic_launcher);
         }
 
-        /*navigationView.getMenu()
-                .findItem(R.id.sign_in_button)
-                .setTitle(mGoogleApiClient.isConnected() ?
-                        R.string.opcao_logout : R.string.opcao_login);*/
     }
 
     // [START auth_with_google]
@@ -345,8 +344,11 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
                         // signed in user can be handled in the listener.
                         if (!task.isSuccessful()) {
                             Log.w(TAG, "signInWithCredential", task.getException());
-                            Toast.makeText(MainActivity.this, "Authentication failed.",
-                                    Toast.LENGTH_SHORT).show();
+                           /* Toast.makeText(MainActivity.this, "Authentication failed.",
+                                    Toast.LENGTH_SHORT).show();*/
+                            Snackbar.make(getParent().getCurrentFocus(),
+                                    "Falha na autenticação", Snackbar.LENGTH_LONG)
+                                    .setAction("Action", null).show();
                         }
                         // [START_EXCLUDE]
                         hideProgressDialog();
@@ -356,7 +358,7 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
     }
     // [END auth_with_google]
 
-    private void initAuthenticatorAPIs() {
+    private void initAPIs() {
         // [START config_signin]
         // Configure Google Sign In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -373,6 +375,109 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         // [START initialize_auth]
         mAuth = FirebaseAuth.getInstance();
         // [END initialize_auth]
+
+        // Initialize Firebase Storage Ref
+        // [START get_storage_ref]
+        mStorageRef = FirebaseStorage.getInstance().getReference();
+        // [END get_storage_ref]
     }
 
+    /**
+     * Showing google speech input dialog
+     * */
+    private void promptSpeechInput() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT,
+                getString(R.string.speech_prompt));
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,
+                getString(R.string.speech_length));
+
+        try {
+            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
+        } catch (ActivityNotFoundException a) {
+            /*Toast.makeText(getApplicationContext(),
+                    getString(R.string.speech_not_supported),
+                    Toast.LENGTH_SHORT).show();*/
+            Snackbar.make(getParent().getCurrentFocus(),
+                    getString(R.string.speech_not_supported), Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
+        }
+    }
+
+    // [START upload]
+    private void uploadToFirebase(List<String> data) {
+        Log.d(TAG, "uploadFromStringArray:src:" + data.toArray());
+
+        // [START get_child_ref]
+        // Get a reference to store file at photos/<FILENAME>.jpg
+        final StorageReference documentRef = mStorageRef.child("documents")
+                .child(user.getEmail() + ".txt");
+        // [END get_child_ref]
+
+        //SETANDO CONTENT TYPE DO ARQUIVO
+        StorageMetadata metadata = new StorageMetadata.Builder()
+                .setContentType("text/plain")
+                .build();
+
+        //ATUALIZANDO O CONTENT TYPE DO ARQUIVI
+        documentRef.updateMetadata(metadata);
+        // Upload file to Firebase Storage
+        // [START_EXCLUDE]
+        showProgressDialog();
+        // [END_EXCLUDE]
+        Log.d(TAG, "upload:dst:" + documentRef.getPath());
+        documentRef.putBytes(data.get(0).getBytes())
+                .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                    @Override
+                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                        // Upload succeeded
+                        Log.d(TAG, "uploadFromStringArray:onSuccess");
+
+                        hideProgressDialog();
+                    }
+                })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+                        // Upload failed
+                        Log.w(TAG, "uploadFromStringArray:onFailure", exception);
+
+
+                        // [START_EXCLUDE]
+                        hideProgressDialog();
+                       /* Toast.makeText(MainActivity.this, "Error: upload failed",
+                                Toast.LENGTH_SHORT).show();*/
+                        Snackbar.make(getParent().getCurrentFocus(),
+                                "Falha no Upload", Snackbar.LENGTH_LONG)
+                                .setAction("Action", null).show();
+                        // [END_EXCLUDE]
+                    }
+                });
+    }
+    // [END upload_from_uri]
+
+    private void signInAnonymously() {
+        // Sign in anonymously. Authentication is required to read or write from Firebase Storage.
+        showProgressDialog();
+        mAuth.signInAnonymously()
+                .addOnSuccessListener(this, new OnSuccessListener<AuthResult>() {
+                    @Override
+                    public void onSuccess(AuthResult authResult) {
+                        Log.d(TAG, "signInAnonymously:SUCCESS");
+                        hideProgressDialog();
+                        updateUI(authResult.getUser());
+                    }
+                })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+                        Log.e(TAG, "signInAnonymously:FAILURE", exception);
+                        hideProgressDialog();
+                        updateUI(null);
+                    }
+                });
+    }
 }

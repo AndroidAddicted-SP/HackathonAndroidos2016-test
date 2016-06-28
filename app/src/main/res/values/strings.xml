@@ -5,6 +5,10 @@
     <string name="opcao_login">Login</string>
     <string name="opcao_logout">Logout</string>
     <string name="action_settings">Settings</string>
-    <string name="loading">Autenticando</string>
+    <string name="loading">Carregando</string>
     <string name="gravar">Gravar Reunião</string>
+    <string name="speech_prompt">Grave sua Ata de Reunião&#8230;</string>
+    <string name="speech_not_supported">Poxa, você não tem suporte a esse recurso =/</string>
+    <string name="imprimir">Imprimir Ata de Reunião</string>
+    <string name="speech_length">10000</string>
 </resources>
