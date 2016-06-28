@@ -5,9 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.support.v4.view.GravityCompat;
@@ -18,6 +16,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -60,7 +59,8 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
 
     private NavigationView navigationView;
     private SignInButton btSignInDefault;
-    private ImageView imvMic;
+    private ImageButton imvMic;
+    private FirebaseUser user;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +69,7 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        imvMic = (ImageView)findViewById(R.id.imvMic);
+        imvMic = (ImageButton) findViewById(R.id.imvMic);
 
         btSignInDefault = (SignInButton) findViewById(R.id.sign_in_button);
         btSignInDefault.setOnClickListener(new View.OnClickListener() {
@@ -95,7 +95,7 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         mAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                FirebaseUser user = firebaseAuth.getCurrentUser();
+                user = firebaseAuth.getCurrentUser();
                 if (user != null) {
                     // User is signed in
                     Log.d(TAG, "onAuthStateChanged:signed_in:" + user.getUid());
@@ -103,12 +103,17 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
                     // User is signed out
                     Log.d(TAG, "onAuthStateChanged:signed_out");
                 }
-                // [START_EXCLUDE]
-                updateUI(user);
-                // [END_EXCLUDE]
             }
         };
         // [END auth_state_listener]
+    }
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        // [START_EXCLUDE]
+        updateUI(user);
+        // [END_EXCLUDE]
     }
 
     @Override
@@ -206,6 +211,8 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
                 // Google Sign In was successful, authenticate with Firebase
                 GoogleSignInAccount account = result.getSignInAccount();
                 firebaseAuthWithGoogle(account);
+                imvMic.setVisibility(View.VISIBLE);
+                btSignInDefault.setVisibility(View.GONE);
             } else {
                 // Google Sign In failed, update UI appropriately
                 // [START_EXCLUDE]
@@ -291,10 +298,13 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
             Picasso.with(MainActivity.this)
                     .load(user.getPhotoUrl())
                     .into(target);
-            /*if (person.hasCover()) {
-            Picasso.with(MainActivity.this)
-                    .load(person.getCover().getCoverPhoto().getUrl())
-                    .into(imgCapa);
+
+            /*Person person = Plus.PeopleApi.getCurrentPerson(mGoogleApiClient);
+
+            if (person.hasCover()) {
+                Picasso.with(MainActivity.this)
+                        .load(person.getCover().getCoverPhoto().getUrl())
+                        .into(imgCapa);
             }*/
 
             findViewById(R.id.sign_in_button).setVisibility(View.GONE);
