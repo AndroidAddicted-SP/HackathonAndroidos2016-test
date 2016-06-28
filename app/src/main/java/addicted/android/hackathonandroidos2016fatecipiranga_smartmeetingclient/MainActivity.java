@@ -60,6 +60,7 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
 
     private NavigationView navigationView;
     private SignInButton btSignInDefault;
+    private ImageView imvMic;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,20 +69,13 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        imvMic = (ImageView)findViewById(R.id.imvMic);
+
         btSignInDefault = (SignInButton) findViewById(R.id.sign_in_button);
         btSignInDefault.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 signIn();
-            }
-        });
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
             }
         });
 
@@ -227,6 +221,11 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
     public void onClick(View view) {
         if(view.getId()==R.id.sign_in_button){
             signIn();
+        }
+        if(view.getId()==R.id.imvMic){
+            //Speech
+
+
         }
     }
 

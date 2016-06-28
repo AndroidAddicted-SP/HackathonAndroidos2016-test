@@ -18,5 +18,12 @@
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"/>
+    <ImageView
+        android:id="@+id/imvMic"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/mic"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
 
 </RelativeLayout>
