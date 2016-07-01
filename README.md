@@ -9,4 +9,4 @@ do Firebase. O Software instalado na impressora busca nesta Cloud a cada 10 segu
 
 #APK
 A APK está na raiz do projeto, porém para funcionar o Sigle SignOn com o Google Plus é necessário passar a chave SHA1 do seu 
-PC para o administrador do sistema, para que ele habilite seu acesso.
+PC para o administrador do sistema, para que ele habilite seu acesso. Detalhes de como fazer isso [aqui](https://developers.google.com/android/guides/client-auth)
