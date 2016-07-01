@@ -1,6 +1,7 @@
 package addicted.android.hackathonandroidos2016fatecipiranga_smartmeetingclient;
 
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -19,7 +20,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -47,9 +47,18 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.pdf.PdfWriter;
 import com.squareup.picasso.Picasso;
 import com.squareup.picasso.Target;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 
@@ -409,27 +418,42 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
 
     // [START upload]
     private void uploadToFirebase(List<String> data) {
+        String documentName = user.getEmail() + ".pdf";
         Log.d(TAG, "uploadFromStringArray:src:" + data.toArray());
 
         // [START get_child_ref]
         // Get a reference to store file at photos/<FILENAME>.jpg
         final StorageReference documentRef = mStorageRef.child("documents")
-                .child(user.getEmail() + ".txt");
+                .child(documentName);
         // [END get_child_ref]
 
         //SETANDO CONTENT TYPE DO ARQUIVO
         StorageMetadata metadata = new StorageMetadata.Builder()
-                .setContentType("text/plain")
+                .setContentType("application/pdf")
                 .build();
 
         //ATUALIZANDO O CONTENT TYPE DO ARQUIVI
         documentRef.updateMetadata(metadata);
+
+        //GERANDO PDF
+        geraPdf(data.get(0), documentName);
+
+        //BUSCANDO PDF CRIADO
+        FileInputStream fileInputStream = null;
+        try {
+            fileInputStream = getFileAsInputStream(documentName);
+        }catch (FileNotFoundException e){
+            Log.e(TAG, e.getMessage());
+        }
         // Upload file to Firebase Storage
         // [START_EXCLUDE]
         showProgressDialog();
         // [END_EXCLUDE]
         Log.d(TAG, "upload:dst:" + documentRef.getPath());
-        documentRef.putBytes(data.get(0).getBytes())
+
+
+
+        documentRef.putStream(fileInputStream)
                 .addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
                     @Override
                     public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
@@ -479,5 +503,47 @@ public class MainActivity extends BaseActivity implements NavigationView.OnNavig
                         updateUI(null);
                     }
                 });
+    }
+
+    //CRIANDO LOCAL DE ARMAZENAMENTO DO ARQUIVO EM PDF
+    private FileOutputStream getOutput(String fileName) throws FileNotFoundException{
+        return openFileOutput(fileName, Context.MODE_PRIVATE);
+    }
+
+    //BUSCANDO ARQUIVO PDF
+    private FileInputStream getFileAsInputStream(String nameFile)throws FileNotFoundException{
+        return openFileInput(nameFile);
+    }
+
+    //GERANDO PDF
+    private void geraPdf(String data, String name){
+        // criação do documento
+        Document document = new Document();
+        try {
+
+            PdfWriter.getInstance(document, getOutput(name));
+            document.open();
+
+            // adicionando um parágrafo no documento
+            Paragraph paragraph1 = new Paragraph();
+            paragraph1.add("Hackaton Androidos - 2016");
+            paragraph1.setAlignment(Element.ALIGN_CENTER);
+            document.add(paragraph1);
+
+            //Adicionando o conteúdo da reunião
+            Paragraph paragraph2 = new Paragraph();
+            paragraph2.setAlignment(Element.ALIGN_JUSTIFIED);
+            paragraph2.setIndentationLeft(20);
+            paragraph2.setIndentationRight(20);
+            paragraph2.add(data);
+            document.add(paragraph2);
+        }
+        catch(DocumentException de) {
+            System.err.println(de.getMessage());
+        }
+        catch(IOException ioe) {
+            System.err.println(ioe.getMessage());
+        }
+        document.close();
     }
 }
