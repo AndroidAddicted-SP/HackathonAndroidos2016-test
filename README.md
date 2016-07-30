@@ -9,3 +9,6 @@ do Firebase. O Software instalado na impressora busca nesta Cloud a cada 10 segu
 
 #APK
 A APK está na raiz do projeto.
+
+#Versão da Impressora
+Aqui está link para acessar o código fonte do aplicativo que deve ser instalado na impressora. [Link](https://github.com/AndroidAddicted-SP/HackathonAndroidos2016FatecIpiranga-SmartMeetingPrint)
